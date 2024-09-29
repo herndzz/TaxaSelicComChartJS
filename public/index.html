@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Taxa Selic e IPCA</title>
+    <!-- Inclui a biblioteca Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Estilos básicos para as tabelas */
+        table {
+            width: 45%;
+            margin: 20px;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .tables-container {
+            display: flex;
+            justify-content: space-around;
+        }
+    </style>
+</head>
+<body>
+    <h2>Gráfico da Taxa Selic e IPCA (Últimos 12 Meses)</h2>
+    <!-- Canvas onde o gráfico será desenhado -->
+    <canvas id="grafico" width="400" height="200"></canvas>
+
+    <!-- Div para conter as duas tabelas -->
+    <div class="tables-container">
+        <!-- Tabela para a taxa Selic -->
+        <table id="tabela-selic">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Taxa Selic (%)</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+
+        <!-- Tabela para o IPCA -->
+        <table id="tabela-ipca">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>IPCA (%)</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        // Função para buscar os dados da API local que criamos
+        async function obterDados() {
+            // Faz uma requisição para a rota /api/dados
+            const response = await fetch('/api/dados');
+            // Converte a resposta para JSON
+            const data = await response.json();
+            // Retorna os dados para uso posterior
+            return data;
+        }
+
+        // Função para preencher uma tabela HTML com os dados fornecidos
+        function preencherTabela(tabelaId, dados, label) {
+            const tabela = document.getElementById(tabelaId).getElementsByTagName('tbody')[0];
+            dados.forEach(dado => {
+                // Cria uma nova linha na tabela
+                const novaLinha = tabela.insertRow();
+
+                // Insere a célula de data
+                const celulaData = novaLinha.insertCell(0);
+                celulaData.textContent = dado.data;
+
+                // Insere a célula de valor
+                const celulaValor = novaLinha.insertCell(1);
+                celulaValor.textContent = parseFloat(dado.valor).toFixed(2);
+            });
+        }
+
+        // Função para criar o gráfico com os dados obtidos
+        async function criarGrafico() {
+            // Chama a função obterDados para obter os dados da Selic e IPCA
+            const dados = await obterDados();
+
+            // Prepara os rótulos do gráfico (datas)
+            const labels = dados.selic.map(dado => dado.data);
+
+            // Prepara os dados das taxas Selic
+            const taxasSelic = dados.selic.map(dado => parseFloat(dado.valor));
+
+            // Prepara os dados do IPCA
+            const taxasIpca = dados.ipca.map(dado => parseFloat(dado.valor));
+
+            // Preenche as tabelas com os dados da Selic e IPCA
+            preencherTabela('tabela-selic', dados.selic);
+            preencherTabela('tabela-ipca', dados.ipca);
+
+            // Obtém o contexto do canvas onde o gráfico será desenhado
+            const ctx = document.getElementById('grafico').getContext('2d');
+
+            // Cria um novo gráfico usando Chart.js
+            const grafico = new Chart(ctx, {
+                type: 'line', // Define o tipo de gráfico como "line" (linha)
+                data: {
+                    labels: labels, // Define os rótulos (datas) no eixo X
+                    datasets: [
+                        {
+                            label: 'Taxa Selic', // Nome da série de dados
+                            data: taxasSelic,    // Dados da Selic
+                            borderColor: 'rgba(75, 192, 192, 1)', // Cor da linha da Selic
+                            borderWidth: 2       // Espessura da linha
+                        },
+                        {
+                            label: 'IPCA',       // Nome da série de dados
+                            data: taxasIpca,     // Dados do IPCA
+                            borderColor: 'rgba(255, 99, 132, 1)', // Cor da linha do IPCA
+                            borderWidth: 2       // Espessura da linha
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: false // O eixo Y não começa no zero (útil para taxas de juros)
+                        }
+                    }
+                }
+            });
+        }
+
+        // Chama a função para criar o gráfico e preencher as tabelas assim que a página é carregada
+        criarGrafico();
+    </script>
+</body>
+</html>
